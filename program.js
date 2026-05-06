@@ -249,7 +249,7 @@ function shitaidou() {
     // 移動
     iy = iy + 1;
 
-    // 音を出す
+    // 音を出す①
     document.getElementById('ochiru').play();
 
     // 移動できるかどうかを確認する
@@ -258,6 +258,7 @@ function shitaidou() {
         // 移動できる
         // 新しい位置に描く
         kaku(cg, ix, iy, imuki, ishurui);
+    
     } else {
         // 移動できない
         // 移動前の場所・向きに戻す
@@ -276,8 +277,11 @@ function shitaidou() {
             }
         }
 
-        // 音を出す
-        document.getElementById('don').play();
+        // 音を出す②
+        document.getElementById('kaiten').play();
+
+        // ライン消しと得点計算する
+        tokutenkeisan()
 
         // 次のブロックとして設定したものが落ちてくるようにする
         ix = 4;
@@ -285,9 +289,31 @@ function shitaidou() {
         ishurui = btsugi;
         imuki = 0;
         kaku(cg, ix, iy, imuki, ishurui);
+        
+        // そこにおけるかを判定
+        kekka = kakunin(ix, iy, imuki, ishurui);
+        if (!kekka) {
+            // 重なっているのでゲームオーバー
+            // 音を出す
+            document.getElementById('gameover').play();
 
+            // メッセージを出す
+            alert('ゲームオーバー');
+
+            // 実行中であることをやめる
+            jikkou = false;
+        }
+        
         // さらに次のブロックを設定
         tsugiwotsukuru();
+
+    }
+
+    // 時間を少しずつ早くする
+    jikan = jikan - 1;
+    if (jikan < 50) {
+        // すごく早くなったら元に戻す
+        jikan = 1000;
     }
 }
 
@@ -384,6 +410,89 @@ function kaku(c, bx, by, muki, shurui) {
 // ブロックの状態の変数
 jyoutai = [];
 
+function tokutenkeisan() {
+    kosuu = 0;
+
+    // 全ラインをチェック
+    for (y = 0; y < 21; y++) {
+        sorottenai = false;
+        for (x = 1; x <= 10; x++) {
+            if (jyoutai[y][x] == 100) {
+                // ブロックがない　（隙間または壁）
+                sorottenai = true;
+            }
+        }
+        if (!sorottenai) {
+            // 揃っている
+
+            kosuu = kosuu + 1;
+
+            // 音を出す
+            document.getElementById('kieru').play();
+
+            // 上から詰める
+            for (k = y; k > 0; k--) {
+                for (x = 1; x <= 10; x++) {
+                    jyoutai[k][x] = jyoutai[k - 1][x];
+                }
+            }
+        }
+    }
+
+            // ブロックを全部描きなおす
+            // 1.キャンバスを取得する
+            gamegamen = document.getElementById('game');
+            cg = gamegamen.getContext('2d');
+
+            // 2.全部消す
+            cg.clearRect(0, 0, 239, 439);
+
+            // 3.ブロックがあるところを描く
+            for (y = 0; y < 22; y++) {
+                for (x = 0; x < 12; x++) {
+                    if ((jyoutai[y][x] != 100) && (jyoutai[y][x] != 99)) {
+                        // ブロックを描く
+                        cg.fillStyle = biro[jyoutai[y][x]];
+                        cg.strokeStyle = '#333333';
+                        cg.lineWidth = 3;
+                        cg.fillRect(x * 20, y * 20, 20, 20);
+                        cg.strokeRect(x * 20, y * 20, 20, 20);
+                    }
+                }
+            }
+    
+            // 得点を計算する
+            switch (kosuu) {
+                case 1:
+                    tokuten = tokuten + 10;
+                    break;
+                case 2:
+                    tokuten = tokuten + 20;
+                    break;
+                case 3:
+                    tokuten = tokuten + 100;
+                    break;
+                case 4:
+                    tokuten = tokuten + 1000;
+                    // ４ラインの時は効果音を鳴らす
+                    document.getElementById('zenbu').play();
+                    break;
+            }
+
+            // 得点を表示する
+            tgamen = document.getElementById('tokuten');
+            tgamen.innerHTML = tokuten;
+}        
+function jikandeugokasu() {
+    if (jikkou) {
+            // 実行中
+            // 下に動かす
+            shitaidou();
+            // 次の時間を設定
+            setTimeout(jikandeugokasu, jikan);
+    }
+}
+
 function gamekaishi() {
     gamegamen = document.getElementById('game');
     cg = gamegamen.getContext('2d');
@@ -391,6 +500,14 @@ function gamekaishi() {
     // 画面を消す
     cg.clearRect(0,0,239,439);
 
+    // 得点をゼロにする
+    tokuten = 0;
+
+    // ゲーム中に設定し、タイマーを設定する
+    jikkou = true;
+    jikan = 1000;
+    setTimeout(jikandeugokasu, jikan);
+    
     // 状態をクリア
     jyoutai = new Array(22);
     for (i = 0; i < 22; i++) {
@@ -434,7 +551,7 @@ function hajime() {
     cb.fillStyle = '#CCCCCC';
 
     // 線を設定
-    cb.strokStyle = '#333333';
+    cb.strokeStyle = '#333333';
     cb.lineWidth = 3;
     
     //　四角形を塗る
